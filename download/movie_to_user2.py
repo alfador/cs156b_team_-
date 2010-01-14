@@ -40,16 +40,32 @@ def flush_users():
     users = {}
 
 
-for movie_id in range(1, num_movies + 1):
-#    if movie_id % 9000 == 0:
-#        flush_users()
-    print 'movie:', movie_id
-    movie_file = id_to_movie(movie_id)
-    movie_file.readline() # Skip movie id line
-    for line in movie_file:
-        [user_id, rating, date] = line.split(',')
-        if not users.has_key(user_id):
-            users[user_id] = []
-        users[user_id].append(str(movie_id) + ',' + rating + ',' + date)
-    movie_file.close()
-flush_users()
+def get_users(user_id_min, user_id_max):
+    '''
+    Converts to user files for all users within the user_id range, inclusive.
+    '''
+    for movie_id in range(1, num_movies + 1):
+#        if movie_id % 9000 == 0:
+#            flush_users()
+        print 'movie:', movie_id
+        movie_file = id_to_movie(movie_id)
+        movie_file.readline() # Skip movie id line
+        for line in movie_file:
+            [user_id, rating, date] = line.split(',')
+            if user_id_min <= int(user_id) <= user_id_max:
+                if not users.has_key(user_id):
+                    users[user_id] = []
+                users[user_id].append(str(movie_id) + ',' + rating + ',' +
+                                      date)
+        movie_file.close()
+    flush_users()
+
+if __name__ == '__main__':
+    # Split into several ranges so that the files are sequential and we don't
+    # run out of memory.
+    get_users(0000001, 0500000)
+    get_users(0500001, 1000000)
+    get_users(1000001, 1500000)
+    get_users(1500001, 2000000)
+    get_users(2000001, 3000000)
+
