@@ -2,8 +2,8 @@
 This script converts the movies files to user files.
 '''
 
-path_to_movies = 'training_set/'
-path_to_users = 'users/'
+path_to_movies = 'train/movies/'
+path_to_users = 'train/users/'
 
 num_movies = 17770
 
@@ -68,4 +68,5 @@ if __name__ == '__main__':
     get_users(1000001, 1500000)
     get_users(1500001, 2000000)
     get_users(2000001, 3000000)
+
 
