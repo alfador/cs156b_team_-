@@ -4,7 +4,7 @@
 class RandomOrder : public OrderingAlgorithm
 {
 public:
-    Random(DataBase *db) : OrderingAlgorithm()
+    RandomOrder(DataBase *db) : OrderingAlgorithm()
     {
         Q_UNUSED(db);
     }
