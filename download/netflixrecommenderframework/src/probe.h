@@ -64,6 +64,7 @@ public:
 
 private:
     bool readProbeData(const QString &probeFileName);
+    bool readProbeDataByUser(const QString &probeFileName);
     DataBase *db;
     Output output;
 };

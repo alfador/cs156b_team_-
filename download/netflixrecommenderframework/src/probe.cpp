@@ -28,6 +28,8 @@
 
 #include "probe.h"
 #include <qvector.h>
+#include <qpair.h>
+#include <qhash.h>
 #include <qdebug.h>
 #include <qfileinfo.h>
 
@@ -38,6 +40,7 @@
 #endif
 
 #define MAGICID 344
+#define USER_PROBE_VERSION 1
 
 Probe::Probe(DataBase *db) : db(db), output(ProbeFile)
 {};
@@ -104,6 +107,108 @@ bool Probe::readProbeData(const QString &probeFileName)
 
     QFileInfo info(probeFileName);
     QString binaryFileName = info.path() + "/" + info.completeBaseName() + QLatin1String(".data");
+    DataBase::saveDatabase(probeData, binaryFileName);
+    qDebug() << "probe data saved to a database";
+    return true;
+}
+
+bool Probe :: readProbeDataByUser(const QString &probeFileName)
+{
+    qDebug() << "Constructing probe data grouped by users";
+    QFile data(probeFileName);
+    if (!data.open(QFile::ReadOnly)) {
+        qWarning() << "Error: Unable to open probe file." << probeFileName;
+        return false;
+    }
+
+    // Create a map mapping users to the movie, ratings pair vector
+    qDebug() << "Sorting probe by user";
+    QMultiHash<unsigned int, 
+               QPair <unsigned short, unsigned char> > userMap;
+
+    uint movie = 0;
+    QTextStream in(&data);
+    QString line;
+    while (!in.atEnd()) {
+        line = in.readLine();
+        if (line.right(1) == ":") {
+            movie = line.mid(0, line.length() - 1).toInt();
+            if (movie <= 0) {
+                qWarning() << "Error: Found movie with id 0 in probe file.";
+                return false;
+            }
+        } else {
+            int realValue = 0;
+            int user = 0;
+            if (line[1] == ',' && QString(line[0]).toInt() < 6 ) {
+                // modified probe
+                realValue = QString(line[0]).toInt();
+                user = line.mid(2).toInt();
+            } else {
+                if (line.contains(",")) {
+                    qWarning() << "Error: Qualifying not supported";
+                    return false;
+                } else {
+                    // default probe
+                    user = line.toInt();
+                    Movie m(db, movie);
+                    realValue = m.findScore(user);
+                }
+            }
+            if (user <= 0) {
+                qWarning() << "Error: Found user with id 0 in probe file."   
+                           << line << line.mid(0, line.indexOf(","));
+                return false;
+            }
+            userMap.insert(user, QPair<unsigned short, unsigned char>
+                                       (movie, realValue)); 
+        }
+    }
+
+    
+    // Insert the data into the compiled vector grouped by user
+    qDebug() << "Compiling Probe data";
+    QList<unsigned int> users = userMap.keys();
+    QVector<uint> probeData;
+    unsigned int prevUser = -1;
+    unsigned int numUsers = 0;
+    for (int i = 0; i < users.size(); ++i)
+    {   
+        // Avoid putting in the same user, the keys list will
+        // have it multiple times in order.
+        if (users[i] == prevUser)
+            continue;
+
+        numUsers++;
+        prevUser = users[i];
+
+        // Start with the id and then the number of movies
+        probeData.append(users[i]);
+
+        QList<QPair<unsigned short, unsigned char> > ratings 
+                = userMap.values(users[i]);
+
+        probeData.append(ratings.size());
+
+        // Now add each movie with its rating
+        for (int j = 0; j < ratings.size(); ++j)
+        {
+            probeData.append(ratings[j].first);
+            probeData.append(ratings[j].second);
+        }
+
+    }    
+
+    // Insert some header values. The order in the file is
+    // MAGICID, Version, user count
+    probeData.insert(0, numUsers);
+    probeData.insert(0, USER_PROBE_VERSION);
+    probeData.insert(0, MAGICID);
+
+    QFileInfo info(probeFileName);
+    QString binaryFileName = info.path() + "/"
+                           + info.completeBaseName()
+                           + QLatin1String("byuser.data");
     DataBase::saveDatabase(probeData, binaryFileName);
     qDebug() << "probe data saved to a database";
     return true;
