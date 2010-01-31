@@ -1,0 +1,76 @@
+Netflix Recommender Framework
+-------
+
+A small C++ framework that lets you hopefully think about the algorithm and not how to fit the database in your memory.
+
+For more information about the netflix prize visit: http://www.netflixprize.com/
+
+If you find this useful I would appreciate getting a book off my Amazon wish list (doesn't need to be new, used is fine by me)
+
+http://www.amazon.com/o/registry/FYDMD50IC8E3
+
+
+Quick Start Instructions
+------
+Move this into the download/ directory after-which it should look like this
+
+download/qualifying.txt
+download/probe.txt
+download/training_set/
+download/netflixrecommenderframework
+
+Go into the algorithms/average directory, run "qmake -recursive" to generate the Makefiles and then make.
+
+cd download/netflixrecommenderframework/algorithms/average
+qmake -recursive
+make
+
+It makes a binary file called "average".
+
+The first time it runs it will read in the entire training data and create a several binary files that is then mmap'd in future runs for the training set and probe data.  On a 32bit system the training set will be 384MB.   The average example implements the average algorithm.  Once the database is created it should take about five seconds when in debug mode and half a second in release for the entire probe data set.
+
+Now that you have seen it working open up main.cpp in your favorite editor and modify the determine() function with your algorithm idea.
+
+If an algorithm you try isn't good enough and you are going to toss it out, if you e-mail it to me I will include it in future releases for everyone to learn from.
+
+There is a doubleaverage algorithm for you to look at that show some usage of the User class.
+
+Finally To run against the qualifying input pass the name "qualifying" to runProbe().
+
+probe.runProbe(&average, "qualifying");
+
+Included Tools
+------
+
+scrubprobedata will remove the probe data from the training files and generate a new probe file containing the answers.
+
+explorer is a small GUI application that lets you explore the data.
+
+movie pass it a movie id and it will output all the votes for the movie in "user,vote" format
+
+user pass it a user id and it will output all the votes by that user in "movie,vote" format
+
+The Code
+-------
+
+The cross platform toolkit Qt version 4 is used for the build system, test system, and basic file operations.  This allows for the code to be used on Windows, OS X, and Linux.  You can download the GPL version of their library at http://www.trolltech.com/ if you do not already have it on your system.
+
+This code is licensed under the BSD license.
+
+The code for the framework is located in the src/ directory.  There are autotests for the included classes in the autotests directory.  There are five main classes in the framework.
+
+DataBase - creates, loads, and holds the pointers the mmaped arrays
+Movie - Class for working with a movie, how many votes it has, etc
+User -  Class for working with a single user, how many votes it made, etc
+Probe - Class that loads the probe data and runs it through the Algorithm
+RMSE - Class to keep track of the current rmse score (used by the probe)
+
+BUGS
+------
+If you find bugs and report them please include a modified autotests file that can reproduce the bug.
+
+---
+
+Enjoy and good luck!
+
+Benjamin Meyer <ben at meyerhome dot net>
