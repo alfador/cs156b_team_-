@@ -80,6 +80,8 @@ public:
 
     Probe(DataBase *db);
     int runProbe(Algorithm *algorithm, const QString &probeFileName = "probe");
+    int runProbeOrdering(OrderingAlgorithm * algorithm,
+                         const QString &probeFileName = "probe");
     void setOutput(Output);
 
 private:

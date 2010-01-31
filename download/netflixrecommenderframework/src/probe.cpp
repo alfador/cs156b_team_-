@@ -27,6 +27,7 @@
  */
 
 #include "probe.h"
+#include "user.h"
 #include <qvector.h>
 #include <qpair.h>
 #include <qhash.h>
@@ -293,3 +294,148 @@ int Probe::runProbe(Algorithm *algorithm, const QString &probeFileName)
     return 0;
 }
 
+int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
+                              const QString &probeFileName)
+{
+    if (probeFileName.isEmpty() || !db->isLoaded())
+        return -1;
+    
+    if (probeFileName == "qualifying")
+    {
+        qWarning() << "qualifying not supported";
+        return -1;
+    }
+
+    QString fileName = db->rootPath() + "/" + probeFileName;
+    if (!QFile::exists(fileName + "byuser.data"))
+        if (!readProbeDataByUser(fileName + ".txt"))
+            return -1;
+
+    uint *probe;
+    uint probeSize = 0;
+
+    QFile file(fileName + "byuser.data");
+    if (file.size() != 0
+            && file.exists()
+            && file.open(QFile::ReadOnly | QFile::Unbuffered)) {
+        probe = (uint*)
+                mmap(0, file.size(), PROT_READ, MAP_SHARED,
+                     file.handle(),
+                     (off_t)0);
+        if (probe == (uint*) - 1) {
+            qWarning() << "probe mmap failed";
+            return -1;
+        }
+        probeSize = file.size() / sizeof(uint);
+    } else {
+        qWarning() << "unable to load probe database";
+        return -1;
+    }
+
+    if (probe[0] != MAGICID) {
+        qWarning() << "probe file is invalid, please remove" << "\"" + fileName + ".data\"" << "so a new one can be generated";
+        return -1;
+    }
+
+    if (probe[1] != USER_PROBE_VERSION) {
+        qWarning() << "Incompatible file format detected. Please remove "
+                   + fileName + "byuser.data so a new one can be generated";
+
+    }
+
+    int numUsers = probe[2];
+    int probeI = 3;
+
+    // Intervals to update progress in seconds
+    int PROGRESS_INTERVAL = 1;
+    clock_t referTime = clock();
+ 
+    // Go through each user
+    User currU(db);
+    double errorSum = 0.0;
+   
+     
+    for (int userI = 0; userI < numUsers; ++userI) 
+    {
+        int userId = probe[probeI++];
+        int numRatings = probe[probeI++];
+
+        currU.setId(userId);
+
+        int errors = 0;
+        int numTests = 0;
+    
+        // Compare all the test set ratings against the training set.
+        for (int i = 0; i < currU.votes(); i++)
+        {
+            for (int j = 0; j < numRatings; j++)
+            {
+                int movie1 = currU.movie(i);
+                int rating1 = currU.score(i);
+    
+                int movie2 = probe[probeI + j * 2];
+                int rating2 = probe[probeI + j * 2 + 1];
+
+                // avoid testing if the two movies are actually rated the same
+                if (rating1 == rating2)
+                    continue;
+
+                // test the predicted order. This value is negative if there
+                // is an error
+                int testVal = (rating2 - rating1) *
+                               algorithm->order(movie1, movie2);
+                
+                if (testVal < 0)
+                    ++errors;
+
+                ++ numTests;
+            }
+        }
+
+        // Test the pairs within the test set itself
+        for (int i = 0; i < numRatings; i++)
+        {
+            for (int j = i + 1; j < numRatings; j++)
+            {
+                int movie1 = probe[probeI + i * 2];
+                int rating1 = probe[probeI + i * 2 + 1];
+    
+                int movie2 = probe[probeI + j * 2];
+                int rating2 = probe[probeI + j * 2 + 1];
+
+                // avoid testing if the two movies are actually rated the same
+                if (rating1 == rating2)
+                    continue;
+
+                // test the predicted order. This value is negative if there
+                // is an error
+                int testVal = (rating2 - rating1) *
+                               algorithm->order(movie1, movie2);
+                
+                if (testVal < 0)
+                    ++errors;
+
+                ++ numTests;
+            }
+        }
+
+        probeI += numRatings * 2;
+        double errorFrac = 0.0;
+        if (numTests > 0)
+            errorFrac = ((double) errors) / numTests;
+
+         
+        errorSum += errorFrac;
+
+        if ((clock() - referTime) / CLOCKS_PER_SEC >= PROGRESS_INTERVAL)
+        {
+            referTime = clock();
+            qDebug() << userI + 1 << "of" << numUsers;
+        }
+    }
+
+    double avgError = errorSum / numUsers;
+    qDebug() << avgError;
+
+    return 0;
+}
