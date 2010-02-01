@@ -272,8 +272,6 @@ int Probe::runProbe(Algorithm *algorithm, const QString &probeFileName)
         int user = probe[i++];
         int realValue = probe[i];
         double guess = algorithm->determine(user);
-        if (i >= 300)
-            return 0;
         
         if (output == SubmitionFile) {
             printf("%f\n", guess);
