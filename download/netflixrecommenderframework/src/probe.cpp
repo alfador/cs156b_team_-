@@ -354,7 +354,7 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
     User currU(db);
     double errorSum = 0.0;
    
-     
+    qDebug() << "Running Error Calculation on probe";     
     for (int userI = 0; userI < numUsers; ++userI) 
     {
         int userId = probe[probeI++];
@@ -430,12 +430,12 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
         if ((clock() - referTime) / CLOCKS_PER_SEC >= PROGRESS_INTERVAL)
         {
             referTime = clock();
-            qDebug() << userI + 1 << "of" << numUsers;
+            qDebug() << userI + 1 << "of" << numUsers << "users done";
         }
     }
 
     double avgError = errorSum / numUsers;
-    qDebug() << avgError;
+    qDebug() << "Error calculation completed. Error is:" << avgError;
 
     return 0;
 }
