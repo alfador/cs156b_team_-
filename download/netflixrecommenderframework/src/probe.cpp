@@ -257,6 +257,12 @@ int Probe::runProbe(Algorithm *algorithm, const QString &probeFileName)
     int total = probe[1];
     int percentDone = 0;
     int currentMovie = -1;
+
+    // Only print updates every once in a while to avoid having console
+    // output be a bottleneck.
+    int PROGRESS_INTERVAL = 1; // time in seconds to wait.
+    clock_t referTime = clock();
+ 
     for (uint i = 2; i < probeSize; ++i) {
         if (probe[i] == 0) {
             currentMovie = -1;
@@ -276,8 +282,15 @@ int Probe::runProbe(Algorithm *algorithm, const QString &probeFileName)
         if (output == SubmitionFile) {
             printf("%f\n", guess);
         } else {
-            if (guess != realValue)
-                qDebug() << i << "movie:" << currentMovie << "user:" << user << "guess:" << guess << "correct:" << realValue << rmse.result();;
+            if ((clock() - referTime) / CLOCKS_PER_SEC > PROGRESS_INTERVAL)
+            {
+                referTime = clock();
+                qDebug() << i << "movie:" << currentMovie 
+                              << "user:" << user
+                              << "guess:" << guess
+                              << "correct:" << realValue
+                              << "done:" << percentDone << "%"; 
+            }
             rmse.addPoint(realValue, guess);
             int t = rmse.count() / (total / 100);
             if (t != percentDone) {
