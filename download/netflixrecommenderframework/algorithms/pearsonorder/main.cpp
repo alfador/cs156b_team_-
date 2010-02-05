@@ -46,6 +46,10 @@ public:
 
         QVector<QVector <float> > pMat;
         pMat.resize(TOTAL_MOVIES);
+        for (int i = 0; i < pMat.size(); i++)
+        {
+            pMat[i].reserve(i);
+        }
 
         qDebug() << "Constructing Correlation Matrix";
 
@@ -53,20 +57,26 @@ public:
         Movie movie(db);
         User  user(db);
 
-        // Keep a vector of pairs of ratings for each possible
-        // common movie
-        QVector< QVector< QPair< float, float> > > commonRatings;
-        commonRatings.resize(TOTAL_MOVIES);
+        // Keep rolling statistics to get correlation
+        // at the end
+        QVector<float> xSum(TOTAL_MOVIES, 0.0);
+        QVector<float> ySum(TOTAL_MOVIES, 0.0);
+        QVector<float> xySum(TOTAL_MOVIES, 0.0);
+        QVector<float> x2Sum(TOTAL_MOVIES, 0.0);
+        QVector<float> y2Sum(TOTAL_MOVIES, 0.0);
+        QVector<int> numCommon(TOTAL_MOVIES, 0);
 
         for (unsigned int i = 0; i < TOTAL_MOVIES; i++)
         {
             qDebug() << i;
 
-            // Reset the pairs of common ratings;
-            for (unsigned int j = 0; j < TOTAL_MOVIES; j++)
-            {
-                commonRatings[j].resize(0);
-            }
+            // Reset all statistic counts
+            xSum.fill(0.0);  
+            ySum.fill(0.0);  
+            xySum.fill(0.0);  
+            x2Sum.fill(0.0);  
+            y2Sum.fill(0.0);  
+            numCommon.fill(0);
 
             movie.setId(i+1);
             int movieId1 = i + 1;
@@ -84,7 +94,6 @@ public:
                 for (int movieI = 0; movieI < user.votes(); movieI++)
                 {
                             
-                    // Update the common movie vectors for each vote here
                     int movieId2 = user.movie(movieI);
                     float rating2 = user.score(movieI);
 
@@ -93,9 +102,16 @@ public:
                     // calculate only lower to higher
                     if (movieId2 <= movieId1)
                         continue;
-                    
-                    commonRatings[movieId2 - 1].append(QPair<float, float>
-                                                       (rating1, rating2));
+                   
+                    // Update the statistic counts
+                    int movie2index = movieId2 - 1;
+
+                    xSum[movie2index] += rating1;
+                    ySum[movie2index] += rating2;
+                    xySum[movie2index] += rating1 * rating2;
+                    x2Sum[movie2index] += rating1 * rating1;
+                    y2Sum[movie2index] += rating2 * rating2;
+                    numCommon[movie2index] ++;
                 }
             }
 
@@ -104,39 +120,26 @@ public:
             // so now just get all the coefficients
             for (unsigned int j = i+1; j < TOTAL_MOVIES; j++)
             {
-                float xMean = 0.0;
-                float yMean = 0.0; 
-                const int NUM_COMMON = commonRatings[j].size();
-  
-                for (int k = 0; k < NUM_COMMON; k++)
-                {
-                    xMean += commonRatings[j][k].first;
-                    yMean += commonRatings[j][k].second;
-                }
+                float xMean = xSum[j] / numCommon[j];
+                float yMean = ySum[j] / numCommon[j];
+              
+                float numer =  (xySum[j] - xSum[j] * yMean -
+                                ySum[j] * xMean + xMean * yMean * numCommon[j]);
 
-                xMean /= NUM_COMMON;
-                yMean /= NUM_COMMON;
+                float denom =  ( sqrt( (x2Sum[j] - 2 * xSum[j] * xMean  
+                                          + xMean * xMean * numCommon[j]) *
 
-                float xydiff = 0.0;
-                float xdiff2 = 0.0;
-                float ydiff2 = 0.0;
+                                       (y2Sum[j] - 2 * ySum[j] * yMean
+                                          + yMean * yMean * numCommon[j])));
 
-                for (int k = 0; k < NUM_COMMON; k++)
-                {
-                    float xdiff = commonRatings[j][k].first - xMean;
-                    float ydiff = commonRatings[j][k].second - yMean;
-                    xydiff += xdiff * ydiff;
-                    xdiff2 += xdiff * xdiff;
-                    ydiff2 += ydiff * ydiff;
-                }
+                float r = numer / denom;
 
-                float corr = xydiff / (sqrt(xdiff2) * sqrt(ydiff2));
-                if (isnan(corr))
-                    corr = 0.0;
+                if (isnan(r))
+                    r = 0.0;
 
                 // Place the correlation in the jth row, ith column
                 // forming a lower triangular matrix
-                pMat[j].append(corr);
+                pMat[j].append(r);
             }
         } 
 
