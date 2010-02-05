@@ -372,6 +372,7 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
         int numRatings = probe[probeI++];
 
         currU.setId(userId);
+        algorithm -> setUser(userId);
 
         int errors = 0;
         int numTests = 0;
