@@ -282,20 +282,16 @@ int Probe::runProbe(Algorithm *algorithm, const QString &probeFileName)
         if (output == SubmitionFile) {
             printf("%f\n", guess);
         } else {
-            if ((clock() - referTime) / CLOCKS_PER_SEC > PROGRESS_INTERVAL)
-            {
+            rmse.addPoint(realValue, guess);
+            int t = rmse.count() / (total / 100);
+            if (t != percentDone ||
+               (clock() - referTime) / CLOCKS_PER_SEC > PROGRESS_INTERVAL) {
+
+                percentDone = t;
                 referTime = clock();
                 qDebug() << i << "movie:" << currentMovie 
                               << "user:" << user
-                              << "guess:" << guess
-                              << "correct:" << realValue
                               << "done:" << percentDone << "%"; 
-            }
-            rmse.addPoint(realValue, guess);
-            int t = rmse.count() / (total / 100);
-            if (t != percentDone) {
-                percentDone = t;
-                qDebug() << rmse.count() << percentDone << "%" << rmse.result();
             }
         }
     }
@@ -372,6 +368,7 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
         int numRatings = probe[probeI++];
 
         currU.setId(userId);
+        algorithm -> setUser(userId);
 
         int errors = 0;
         int numTests = 0;
