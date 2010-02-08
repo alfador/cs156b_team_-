@@ -78,6 +78,16 @@ public:
         return (isLoaded()) ? 17770 : 0;
     }
 
+    void calcAverageRating();
+
+    float getAverageRating()
+    {
+        if (averageRating == -1)
+            calcAverageRating();
+
+        return averageRating;
+    }
+
     // functions to pull out the vote and user
     static inline uint gscore(uint x)
     {
@@ -120,6 +130,8 @@ private:
     QFile *userFile;
     QFile *userIndexFile;
     QString m_rootPath;
+
+    float averageRating;
 };
 
 #endif

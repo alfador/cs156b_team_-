@@ -66,6 +66,8 @@ DataBase::DataBase(const QString &rootPath) :
             dir.cdUp();
         }
     }
+
+    averageRating = -1;
 }
 
 DataBase::~DataBase()
@@ -86,6 +88,26 @@ DataBase::~DataBase()
         munmap(storedUsersIndex, userIndexFile->size());
         delete userIndexFile;
     }
+}
+
+void DataBase :: calcAverageRating()
+{
+    Movie movie(this, 1); 
+    float ratingSum = 0.0;
+    int numRatings  = 0;
+    for (int i = 0; i < totalMovies(); i++)
+    {
+        movie.setId(i + 1);
+    
+        for (int j = 0; j < movie.votes(); j++)
+        {
+            ratingSum += movie.score(j);
+            numRatings++;
+        } 
+    } 
+
+    averageRating = ratingSum / numRatings; 
+
 }
 
 QString DataBase::rootPath() const
