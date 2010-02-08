@@ -22,9 +22,6 @@ public:
         // Load the sorted correlation file 
         QString fileName = db->rootPath() + "correlation.dat";
         loadCorrelations(db, fileName);
-
-        oldMovieId1 = -1;
-        oldMovieId2 = -1;
     }
     
     ~PearsonOrder()
@@ -191,46 +188,35 @@ public:
         return 0;
     } 
 
-    void loadCorrelationRow(int movieId,
-                            QVector<float>& corr)
+    float getCorr(int movieId1, int movieId2)
     {
- 
-        // Load up the correlation row for this movie       
-        // Note that only the lower triangular matrix is stored,
-        // without the main diagonal. So the relevant partial
-        // row and partial column must both be traversed.
-        corr.resize(numMovies);
-        int count = 0;
-
-        // Use triangular numbers to get the index of
-        // the row we need to start at.
-        unsigned int i = movieId - 1;
-        unsigned int ref = ((i-1) * (i)) >> 1; 
-
-        for (unsigned int rowI = 0; rowI < i; rowI++)
+        
+        // Order the two ids so that movieId1 is smaller
+        if (movieId2 > movieId1)
         {
-            corr[count++] =  pMat[ref + rowI];
+            int temp = movieId1;
+            movieId1 = movieId2;    
+            movieId2 = temp;
         }
 
-        // append the current movie with correlation 0, so that
-        // it will not affect its own rating.
-        corr[count++] = 0.0;
+        // Same movie should have 0 correlation, so that it does not
+        // affect its own rating
+        if (movieId1 == movieId2)
+            return 0;
 
-        // append the partial column. This requires adding
-        // an increasing offset per row
-        int offset = i;
-        int currI = ref + offset + i;
-        for (unsigned int colI = 0; colI < numMovies - i - 1; colI++)
-        {
-            corr[count++] = pMat[currI];
-            offset ++;
-            currI += offset;
-        } 
-    } 
 
-    float calcRating(int movieId,
-                     QVector<float> & corr,
-                     int& currCorrMovieId)
+        // The lower triangular matrix is stored at pMat (excluding the
+        // main diagonal), so return the movieId2 row, movieId1 column
+        
+        // Use triangular numbers to get the index of
+        // the row we need to start at.
+        unsigned int i = movieId2 - 1;
+        unsigned int ref = ((i-1) * (i)) >> 1; 
+
+        return pMat[ref + movieId1 - 1];
+    }
+
+    float calcRating(int movieId)
     {
         // Check if the value was already calculated, if so just return
         // the pre-computed value
@@ -241,14 +227,6 @@ public:
 
        
         // Otherwise, the value should be computed and then stored
-        
-        // Load up a new correlation vector if needed
-        if (movieId != currCorrMovieId)
-        {
-            loadCorrelationRow(movieId, corr);
-            currCorrMovieId = movieId;  
-        }
-
         float corrSum = 0;
         float ratingSum = 0;
         int userMax = currUser.votes();
@@ -257,7 +235,7 @@ public:
         {
             int rating = currUser.score(i);
             int mov    = currUser.movie(i);
-            float r    = corr[mov - 1];
+            float r    = getCorr(movieId, mov);
 
             corrSum   += fabs(r);
             ratingSum += r * rating; 
@@ -282,8 +260,8 @@ public:
     int order(int movieId1, int movieId2)
     {
         // Load up each movie's correlation vectors
-        float rating1 = calcRating(movieId1, corr1, oldMovieId1);
-        float rating2 = calcRating(movieId2, corr2, oldMovieId2);
+        float rating1 = calcRating(movieId1);
+        float rating2 = calcRating(movieId2);
 
         if (rating1 < rating2)
             return -1;
@@ -296,11 +274,6 @@ private:
     unsigned int numMovies; 
     User currUser;
 
-    int oldMovieId1;
-    int oldMovieId2;
-
-    QVector< float > corr1;
-    QVector< float > corr2;
     QHash< QPair<unsigned int, unsigned short>, float > cachedRatings;
 };
 
