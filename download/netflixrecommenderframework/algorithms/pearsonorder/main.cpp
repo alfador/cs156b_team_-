@@ -204,7 +204,6 @@ public:
         if (movieId1 == movieId2)
             return 0;
 
-
         // The lower triangular matrix is stored at pMat (excluding the
         // main diagonal), so return the movieId2 row, movieId1 column
         
@@ -220,11 +219,8 @@ public:
     {
         // Check if the value was already calculated, if so just return
         // the pre-computed value
-        if (cachedRatings.contains(QPair<unsigned int, unsigned short>
-                                        (currUser.id(), movieId)))
-            return cachedRatings[QPair<unsigned int, unsigned short>
-                                      (currUser.id(), movieId)];
-
+        if (cachedRatings.contains(movieId))
+            return cachedRatings[movieId];
        
         // Otherwise, the value should be computed and then stored
         float corrSum = 0;
@@ -246,8 +242,7 @@ public:
         if (isnan(rating))
             rating = 3.0;
   
-        cachedRatings[QPair<unsigned int, unsigned short>
-                                 (currUser.id(), movieId)] = rating;
+        cachedRatings[movieId] = rating;
 
         return rating;
     }
@@ -255,6 +250,9 @@ public:
     void setUser(int id)
     {
         currUser.setId(id);
+
+        // Clear the cache for the next user
+        cachedRatings.clear();
     }
 
     int order(int movieId1, int movieId2)
@@ -274,7 +272,7 @@ private:
     unsigned int numMovies; 
     User currUser;
 
-    QHash< QPair<unsigned int, unsigned short>, float > cachedRatings;
+    QHash< unsigned int, float > cachedRatings;
 };
 
 int main(int , char **)
