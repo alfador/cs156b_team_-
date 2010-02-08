@@ -13,14 +13,6 @@
 #include <sys/mman.h>
 #endif
 
-#define K 100
-
-bool compareByFirst(const QPair<float, unsigned short> &a,
-                    const QPair<float, unsigned short> &b)
-{
-    return a.first > b.first;
-};
-
 class PearsonOrder : public OrderingAlgorithm
 {
 
@@ -199,8 +191,8 @@ public:
         return 0;
     } 
 
-    void loadSortedCorrelation(int movieId,
-                               QVector<QPair< float, unsigned short> >& corr)
+    void loadCorrelationRow(int movieId,
+                            QVector<float>& corr)
     {
  
         // Load up the correlation row for this movie       
@@ -217,14 +209,12 @@ public:
 
         for (unsigned int rowI = 0; rowI < i; rowI++)
         {
-            corr[count++] =  QPair<float, unsigned short> 
-                              (pMat[ref + rowI], rowI + 1);
+            corr[count++] =  pMat[ref + rowI];
         }
 
         // append the current movie with correlation 0, so that
         // it will not affect its own rating.
-        corr[count++] = QPair<float, unsigned short>
-                            (0, i + 1);
+        corr[count++] = 0.0;
 
         // append the partial column. This requires adding
         // an increasing offset per row
@@ -232,18 +222,14 @@ public:
         int currI = ref + offset + i;
         for (unsigned int colI = 0; colI < numMovies - i - 1; colI++)
         {
-            corr[count++] = QPair<float, unsigned short> 
-                                (pMat[currI], i + colI + 2);
+            corr[count++] = pMat[currI];
             offset ++;
             currI += offset;
         } 
-
-        // Now sort by correlation
-        qSort(corr.begin(), corr.end(), compareByFirst);
     } 
 
     float calcRating(int movieId,
-                     QVector< QPair<float, unsigned short> > & corr,
+                     QVector<float> & corr,
                      int& currCorrMovieId)
     {
         // Check if the value was already calculated, if so just return
@@ -259,34 +245,22 @@ public:
         // Load up a new correlation vector if needed
         if (movieId != currCorrMovieId)
         {
-            loadSortedCorrelation(movieId, corr);
+            loadCorrelationRow(movieId, corr);
             currCorrMovieId = movieId;  
         }
 
         float corrSum = 0;
         float ratingSum = 0;
-        int numAdded = 0;
         int userMax = currUser.votes();
 
-        for (unsigned int i = 0; i < numMovies
-                                 && numAdded < userMax
-                                 && numAdded < K; 
-                          i++)
+        for (int i = 0; i < userMax; i++)
         {
-            float r = corr[i].first;
-            int mov = corr[i].second;
+            int rating = currUser.score(i);
+            int mov    = currUser.movie(i);
+            float r    = corr[mov - 1];
 
-            int rating = currUser.seenMovie(mov);
-            if (rating == -1)
-                continue;
-
-            ratingSum += rating * r;           
-            if (r > 0)
-                corrSum += r;
-            else
-                corrSum -= r;
-
-            numAdded++;
+            corrSum   += fabs(r);
+            ratingSum += r * rating; 
         }
 
         float rating = ratingSum / corrSum;
@@ -325,8 +299,8 @@ private:
     int oldMovieId1;
     int oldMovieId2;
 
-    QVector< QPair<float, unsigned short> > corr1;
-    QVector< QPair<float, unsigned short> > corr2;
+    QVector< float > corr1;
+    QVector< float > corr2;
     QHash< QPair<unsigned int, unsigned short>, float > cachedRatings;
 };
 
