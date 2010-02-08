@@ -31,6 +31,8 @@ public:
         QString fileName = db->rootPath() + "correlation.dat";
         loadCorrelations(db, fileName);
 
+        oldMovieId1 = -1;
+        oldMovieId2 = -1;
     }
     
     ~PearsonOrder()
@@ -240,7 +242,9 @@ public:
         qSort(corr.begin(), corr.end(), compareByFirst);
     } 
 
-    float calcRating(unsigned int movieId)
+    float calcRating(int movieId,
+                     QVector< QPair<float, unsigned short> > & corr,
+                     int& currCorrMovieId)
     {
         // Check if the value was already calculated, if so just return
         // the pre-computed value
@@ -249,9 +253,15 @@ public:
             return cachedRatings[QPair<unsigned int, unsigned short>
                                       (currUser.id(), movieId)];
 
-        
+       
         // Otherwise, the value should be computed and then stored
-        loadSortedCorrelation(movieId, corr);
+        
+        // Load up a new correlation vector if needed
+        if (movieId != currCorrMovieId)
+        {
+            loadSortedCorrelation(movieId, corr);
+            currCorrMovieId = movieId;  
+        }
 
         float corrSum = 0;
         float ratingSum = 0;
@@ -298,9 +308,8 @@ public:
     int order(int movieId1, int movieId2)
     {
         // Load up each movie's correlation vectors
-        
-        float rating1 = calcRating(movieId1);
-        float rating2 = calcRating(movieId2);
+        float rating1 = calcRating(movieId1, corr1, oldMovieId1);
+        float rating2 = calcRating(movieId2, corr2, oldMovieId2);
 
         if (rating1 < rating2)
             return -1;
@@ -313,7 +322,11 @@ private:
     unsigned int numMovies; 
     User currUser;
 
-    QVector< QPair<float, unsigned short> > corr;
+    int oldMovieId1;
+    int oldMovieId2;
+
+    QVector< QPair<float, unsigned short> > corr1;
+    QVector< QPair<float, unsigned short> > corr2;
     QHash< QPair<unsigned int, unsigned short>, float > cachedRatings;
 };
 
