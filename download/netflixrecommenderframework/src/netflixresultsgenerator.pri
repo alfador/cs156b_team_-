@@ -10,14 +10,16 @@ SOURCES += database.cpp \
 	   movie.cpp \
            probe.cpp \
 	   user.cpp \
-           quickdatabase.cpp
+           quickdatabase.cpp \
+       fMatrix.cpp
 
 HEADERS += database.h \
            movie.h \
            probe.h \
            rmse.h \
            user.h \
-           quickdatabase.h
+           quickdatabase.h \
+           fMatrix.h
 
 win32 {
     SOURCES += $$PWD/winmmap.cpp

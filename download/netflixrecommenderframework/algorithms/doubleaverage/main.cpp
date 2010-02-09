@@ -27,7 +27,11 @@
  */
 
 #include <probe.h>
+#include <iostream>
 #include <user.h>
+#include <movie.h>
+
+using namespace std;
 
 /**
     One of the basic algorithm is the average algorithm which takes
@@ -48,6 +52,7 @@ public:
     double determine(int userId)
     {
         if (currentMovieAverage == -1) {
+            // No movie average for this movie yet
             currentMovieAverage = 0;
             uint currentMovieVotes = currentMovie.votes();
             for (uint i = 0; i < currentMovieVotes; ++i) {

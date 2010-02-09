@@ -1,4 +1,6 @@
 
+#include <QString>
+
 class fMatrix {
 public:
     // Constructors
@@ -28,6 +30,8 @@ public:
     // Other
     void multiply(fMatrix& other, fMatrix& result);
     void randomize();
+    int toFile(QString filename);
+    int fromFile(QString filename);
 
 private:
     int num_rows;

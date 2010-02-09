@@ -2,6 +2,10 @@
 #include "fMatrix.h"
 #include "assert.h"
 #include <cstdlib>
+#include <QString>
+#include <QFile>
+#include <QDebug>
+#include <QByteArray>
 
 // Constructors
 
@@ -65,5 +69,64 @@ void fMatrix::randomize() {
     for (int r = 0; r < this->rows(); r++)
         for (int c = 0; c < this->cols(); c++)
             this->setEntry(r, c, (float) rand() / RAND_MAX);
+}
+
+
+// Saves this matrix to file
+// Returns +1 if an error occurs, 0 otherwise.
+int fMatrix::toFile(QString filename) {
+    QFile fOut(filename);
+
+    // Check if we can even write to a file.
+    if (! fOut.open(QFile :: WriteOnly)) {
+        qDebug() << "Unable to open file for writing!";
+        return 1;
+    }
+
+    // Write the matrix dimensions to file.
+    fOut.write((char *) &num_rows, sizeof(int));
+    fOut.write((char *) &num_cols, sizeof(int));
+
+    // Write each entry to file.
+    for (int i = 0; i < num_rows; i++)
+        for (int j = 0; j < num_cols; j++) {
+            float result = this->getEntry(i, j);
+            fOut.write((char *) &result, sizeof(float));
+        }
+    fOut.flush();
+    fOut.close();
+    return 0;
+}
+
+
+// Loads a matrix from file, and stores it in this.
+// Returns +1 if an error occurs, 0 otherwise.
+int fMatrix::fromFile(QString filename) {
+    QFile fIn(filename);
+
+    // Check if we can read from file.
+    if (! fIn.open(QFile :: ReadOnly)) {
+        qDebug() << "Unable to open file for reading!";
+        return 1;
+    }
+
+    // Read in the matrix dimensions.
+    int rows, cols;
+    fIn.read((char *)&rows, sizeof(int));
+    fIn.read((char *)&cols, sizeof(int));
+
+    // Resize
+    this->setSize(rows, cols);
+
+    // Read in each entry.
+    for (int r = 0; r < rows; ++r)
+        for (int c = 0; c < cols; ++c) {
+            float entry;
+            fIn.read((char *) &entry, sizeof(float));
+            this->setEntry(r, c, entry);
+        }
+
+    fIn.close();
+    return 0;
 }
 
