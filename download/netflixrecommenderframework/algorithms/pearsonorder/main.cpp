@@ -282,9 +282,9 @@ public:
         float rating1 = calcRating(movieId1);
         float rating2 = calcRating(movieId2);
 
-        if (rating1 < rating2)
+        if (rating1 > rating2)
             return -1;
-        else if (rating1 > rating2)
+        else if (rating1 < rating2)
             return 1;
         else
             return rand() % 2 * 2 - 1;
