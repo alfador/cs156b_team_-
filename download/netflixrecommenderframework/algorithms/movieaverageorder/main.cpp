@@ -5,16 +5,16 @@
 using std :: cout;
 using std :: endl;
 
-class MovieAverageOrder : public OrderingAlgorithm
+class MovieAverageOrder : public OrderingAlgorithm, public Algorithm
 {
 public:
-    MovieAverageOrder(DataBase *db) : OrderingAlgorithm()
+    MovieAverageOrder(DataBase *db) : OrderingAlgorithm(), Algorithm()
     {
         cout << "Training Averages" << endl;
         // Train all the movie averages, all 17770 should
         // easily fit in memory
         unsigned int total = db->totalMovies();
-        avgs = new float[total];
+        avgs = new float[total + 1];
 
         Movie m(db);
         
@@ -51,17 +51,48 @@ public:
             return -1;    
     }
 
+    void setMovie(int id)
+    {
+        currentMovieId = id;
+    }
+
+    double determine(int userId)
+    {
+        Q_UNUSED(userId);
+        return avgs[currentMovieId];
+    } 
+
+
 private:
-    
     float * avgs;
+
+    unsigned int currentMovieId;
 };
 
-int main(int , char **)
+int main(int numArgs, char ** args)
 {
+    bool doOrder = true;
+    if (numArgs == 2)
+    {
+        if (!strcmp(args[1], "order"))
+            doOrder = true;
+        else if (!strcmp(args[1], "rmse"))
+            doOrder = false;
+        else
+        {
+            cout << "Argument " << args[1] << " not recognized" << endl;
+            cout << "Defaulting to ordering error" << endl;
+            doOrder = true;
+        } 
+    }
     DataBase db;
     db.load();
     Probe probe(&db);
     MovieAverageOrder movieAvg(&db);
-    probe.runProbeOrdering(&movieAvg, "probe");
+    
+    if (doOrder)
+        probe.runProbeOrdering(&movieAvg, "probe");
+    else
+        probe.runProbe(&movieAvg, "probe");
 }
 
