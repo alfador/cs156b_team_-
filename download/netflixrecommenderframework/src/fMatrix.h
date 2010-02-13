@@ -19,6 +19,7 @@ public:
 
     // Mutators
     void setSize(int rows, int cols);
+    void addFMatrix(fMatrix& other);
     inline void setEntry(int row, int col, float num) {
         mat[row * num_cols + col] = num;
     }

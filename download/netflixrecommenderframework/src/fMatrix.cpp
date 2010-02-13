@@ -9,10 +9,10 @@
 
 // Constructors
 
-// Makes a 0x0 matrix.
+// Makes a 1x1 matrix.
 fMatrix::fMatrix() {
-    num_rows = 0;
-    num_cols = 0;
+    num_rows = 1;
+    num_cols = 1;
     mat = new float[1];
 }
 
@@ -48,6 +48,14 @@ void fMatrix::setSize(int rows, int cols) {
         mat[i] = 0;   
 }
 
+// Adds a matrix to this matrix
+void fMatrix::addFMatrix(fMatrix& other) {
+    assert(other.rows() == this->num_rows && other.cols() == this->num_cols);
+    // Assume same size
+    for (int i = 0; i < this->num_rows; i++)
+        for (int j = 0; j < this->num_cols; j++)
+            plusEntry(i, j, other.getEntry(i, j));
+}
 
 // Multiply two matrices
 void fMatrix::multiply(fMatrix& other, fMatrix& result) {
