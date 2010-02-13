@@ -213,7 +213,7 @@ public:
     {
         
         // Order the two ids so that movieId1 is smaller
-        if (movieId2 > movieId1)
+        if (movieId2 < movieId1)
         {
             int temp = movieId1;
             movieId1 = movieId2;    
