@@ -3,8 +3,8 @@ TARGET =
 DEPENDPATH += .
 INCLUDEPATH += .
 CONFIG -= app_bundle
-#CONFIG += release
-CONFIG += debug
+CONFIG += release
+#CONFIG += debug
 CONFIG += console
 QT = core
 
