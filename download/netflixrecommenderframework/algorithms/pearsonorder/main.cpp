@@ -263,8 +263,10 @@ public:
 
         if (rating1 < rating2)
             return -1;
-        else
+        else if (rating1 > rating2)
             return 1;
+        else
+            return rand() % 2 * 2 - 1;
     }
 
 private:
