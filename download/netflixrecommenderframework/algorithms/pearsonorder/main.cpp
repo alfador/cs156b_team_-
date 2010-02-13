@@ -13,6 +13,15 @@
 #include <sys/mman.h>
 #endif
 
+// Regularization constant to prevent correlations obtained from
+// a low amount of common ratings from being used too highly
+const float CORR_REGULARIZE = 55.0;
+
+// Regularization constant to prevent low correlation sums (implying
+// that there really is no correlation information) from moving the
+// rating far from the mean
+const float CORRSUM_REGULARIZE = 0;
+
 class PearsonOrder : public OrderingAlgorithm
 {
 
@@ -22,6 +31,8 @@ public:
         // Load the sorted correlation file 
         QString fileName = db->rootPath() + "correlation.dat";
         loadCorrelations(db, fileName);
+
+        currDb = db;
     }
     
     ~PearsonOrder()
@@ -209,7 +220,7 @@ public:
         return 0;
     } 
 
-    float getCorr(int movieId1, int movieId2)
+    void getCorr(int movieId1, int movieId2, float& corr, unsigned int& num)
     {
         
         // Order the two ids so that movieId1 is smaller
@@ -223,7 +234,11 @@ public:
         // Same movie should have 0 correlation, so that it does not
         // affect its own rating
         if (movieId1 == movieId2)
-            return 0;
+        {
+            corr = 0;
+            num = 0;
+            return;
+        } 
 
         // The lower triangular matrix is stored at pMat (excluding the
         // main diagonal), so return the movieId2 row, movieId1 column
@@ -233,7 +248,11 @@ public:
         unsigned int i = movieId2 - 1;
         unsigned int ref = ((i-1) * (i)) >> 1; 
 
-        return pMat[ref + movieId1 - 1];
+        corr = pMat[ref + movieId1 - 1];
+        if (isinf(corr))
+            corr = 0.0;
+
+        num  = numMat[ref + movieId1 - 1];
     }
 
     float calcRating(int movieId)
@@ -242,7 +261,7 @@ public:
         // the pre-computed value
         if (cachedRatings.contains(movieId))
             return cachedRatings[movieId];
-       
+      
         // Otherwise, the value should be computed and then stored
         float corrSum = 0;
         float ratingSum = 0;
@@ -250,18 +269,23 @@ public:
 
         for (int i = 0; i < userMax; i++)
         {
-            int rating = currUser.score(i);
+            float rating = currUser.score(i) - currDb->getAverageRating();
+            
             int mov    = currUser.movie(i);
-            float r    = getCorr(movieId, mov);
+            float r;
+            unsigned int num;
+            getCorr(movieId, mov, r, num);
+
+            r *= num / (num + CORR_REGULARIZE);
 
             corrSum   += fabs(r);
             ratingSum += r * rating; 
         }
 
-        float rating = ratingSum / corrSum;
+        float rating = ratingSum / (corrSum + CORRSUM_REGULARIZE);
 
         if (isnan(rating))
-            rating = 3.0;
+            rating = 0.0;
   
         cachedRatings[movieId] = rating;
 
@@ -297,6 +321,8 @@ private:
     User currUser;
 
     QHash< unsigned int, float > cachedRatings;
+
+    DataBase * currDb;
 };
 
 int main(int , char **)
