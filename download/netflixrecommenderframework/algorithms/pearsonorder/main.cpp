@@ -42,6 +42,13 @@ public:
             pMat[i].reserve(i);
         }
 
+        QVector<QVector <unsigned int> > numMat;
+        numMat.resize(TOTAL_MOVIES);
+        for (int i = 0; i < numMat.size(); i++)
+        {
+            numMat[i].reserve(i);
+        }
+
         qDebug() << "Constructing Correlation Matrix";
 
         // Go through each movie
@@ -131,6 +138,7 @@ public:
                 // Place the correlation in the jth row, ith column
                 // forming a lower triangular matrix
                 pMat[j].append(r);
+                numMat[j].append(numCommon[j]);
             }
         } 
 
@@ -146,13 +154,24 @@ public:
 
         fout.write((char*) &TOTAL_MOVIES, sizeof(unsigned int));
 
+        // Write the lower triangular matrix of correlations
         for (int i = 0; i < pMat.size(); i++)
         {
             for (int j = 0; j < pMat[i].size(); j++)
             {
                 fout.write((char *)(&pMat[i][j]), sizeof(float));
             }
-        }        
+        }       
+
+        // Write the lower triangular matrix of number of users in
+        // common right afterward. 
+        for (int i = 0; i < numMat.size(); i++)
+        {
+            for (int j = 0; j < numMat[i].size(); j++)
+            {
+                fout.write((char *)(&numMat[i][j]), sizeof(unsigned int));
+            }
+        }
 
         return 0;
     }
@@ -184,6 +203,8 @@ public:
 
         numMovies = ((unsigned int*) pMat)[0];
         pMat++;
+
+        numMat = (unsigned int*)(&pMat[(numMovies - 1) * numMovies / 2]); 
 
         return 0;
     } 
@@ -271,6 +292,7 @@ public:
 
 private:
     float * pMat;
+    unsigned int * numMat;
     unsigned int numMovies; 
     User currUser;
 
