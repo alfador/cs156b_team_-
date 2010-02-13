@@ -351,6 +351,8 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
     }
 
     int numUsers = probe[2];
+    int counted_users = numUsers; // Users with any comparisons that count
+
     int probeI = 3;
 
     // Intervals to update progress in seconds
@@ -431,6 +433,8 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
         double errorFrac = 0.0;
         if (numTests > 0)
             errorFrac = ((double) errors) / numTests;
+        else
+            --counted_users;
 
          
         errorSum += errorFrac;
@@ -442,7 +446,7 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
         }
     }
 
-    double avgError = errorSum / numUsers;
+    double avgError = errorSum / counted_users;
     qDebug() << "Error calculation completed. Error is:" << avgError;
 
     return 0;
