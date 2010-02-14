@@ -1,5 +1,11 @@
 Movieset: FULL
-Date:     2/13
+Date:     2/12
 CORR_REGULARIZE:    55
 CORRSUM_REGULARIZE: 0
 Error:    .370473
+
+Movieset: FULL
+Date:     2/12
+CORR_REGULARIZE: 1375
+CORRSUM_REGULARIZE: .5
+Error:    .36872
