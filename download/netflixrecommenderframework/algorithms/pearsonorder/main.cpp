@@ -22,7 +22,7 @@ const float CORR_REGULARIZE = 55.0;
 // rating far from the mean
 const float CORRSUM_REGULARIZE = 0;
 
-class PearsonOrder : public OrderingAlgorithm
+class PearsonOrder : public OrderingAlgorithm, public Algorithm
 {
 
 public:
@@ -314,6 +314,19 @@ public:
             return rand() % 2 * 2 - 1;
     }
 
+    void setMovie(int id)
+    {
+        currMovieId = id;          
+    }
+
+    double determine(int userId)
+    {
+        currUser.setId(userId);
+        cachedRatings.clear();
+
+        return currDb->getAverageRating() + calcRating(currMovieId);
+    }
+
 private:
     float * pMat;
     unsigned int * numMat;
@@ -323,15 +336,36 @@ private:
     QHash< unsigned int, float > cachedRatings;
 
     DataBase * currDb;
+
+    unsigned int currMovieId;
+
 };
 
-int main(int , char **)
+int main(int numArgs, char ** args)
 {
+    bool doOrder = true;
+    if (numArgs == 2)
+    {
+        if (!strcmp(args[1], "order"))
+            doOrder = true;
+        else if (!strcmp(args[1], "rmse"))
+            doOrder = false;
+        else
+        {
+            qDebug() << "Argument" << args[1] << "not recognized" << endl;
+            qDebug() << "Defaulting to ordering error" << endl;
+            doOrder = true;
+        } 
+    }
     DataBase db;
     db.load();
     Probe probe(&db);
-    PearsonOrder algorithm(&db);
-    probe.runProbeOrdering(&algorithm, "probe");
-    return 0;
+    PearsonOrder alg(&db);
+
+    if (doOrder)
+        probe.runProbeOrdering(&alg, "probe");
+    else
+        probe.runProbe(&alg, "probe");
+
 }
 
