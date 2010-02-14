@@ -14,7 +14,7 @@ public:
         // Train all the movie averages, all 17770 should
         // easily fit in memory
         unsigned int total = db->totalMovies();
-        avgs = new float[total];
+        avgs = new float[total + 1];
 
         Movie m(db);
         
