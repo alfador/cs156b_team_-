@@ -234,8 +234,12 @@ int main(int numArgs, char ** args)
     db.load();
     Probe probe(&db);
     SvdOrder alg(&db);
- //   alg.loadFeatures("Features.dat");
-    alg.calculateFeatures();
+    QFile f("Features.dat");
+
+    if (f.exists())
+        alg.loadFeatures("Features.dat");
+    else
+        alg.calculateFeatures();
 
     if (doOrder)
         probe.runProbeOrdering(&alg, "probe");
