@@ -20,10 +20,13 @@ public:
     // Mutators
     void setSize(int rows, int cols);
     void addFMatrix(fMatrix& other);
+
+    // row, col indexed at 0
     inline void setEntry(int row, int col, float num) {
         mat[row * num_cols + col] = num;
     }
 
+    // row, col indexed at 0
     inline void plusEntry(int row, int col, float num) {
         mat[row * num_cols + col] += num;
     }

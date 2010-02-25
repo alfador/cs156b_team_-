@@ -5,22 +5,24 @@
 #include <movie.h>
 #include <user.h>
 #include <ctime>
+#include <assert.h>
+#include <cmath>
 
 using std :: cout;
 using std :: endl;
 
-const float SINK_PROB = .1;     // Probability of going to the sink node
+const float SINK_PROB = .3;     // Probability of going to the sink node
 const float WEIGHT_SCALE = 1 - SINK_PROB;
 const int FIRST_USER = 6;       // ID of first user
 const int MAX_USER_ID = 2649429; // Maximal user id
-
+const int num_iters = 10; // Number of iterations to run
 const int MOVIE_LIMIT = 500;   // For testing on smaller data.  Inclusive.
 
 
 // Converts a rating (1-5) to a weight
 // Adjust this function for your own purposes
 inline float rating_to_weight(int rating) {
-    return rating * rating;
+    return pow(rating, 4);
 }
 
 // Implements the OrderingAlgorithm interface 
@@ -90,7 +92,7 @@ public:
                 }
             // In case a user hasn't rated any movies within the desired
             // movie limit.  This prevents divide by 0 errors.
-            weight_sum = (weight_sum != 0) ? weight_sum : 0;
+            weight_sum = (weight_sum != 0) ? weight_sum : 1;
 
             user_sum[i] = weight_sum;
         }
@@ -138,6 +140,16 @@ public:
         trans_mat.setEntry(MOVIE_LIMIT, MOVIE_LIMIT, 1);
 
 
+//        // Make sure row sums are 1.
+//        for (int i = 0; i < MOVIE_LIMIT + 1; ++i) {
+//            float row_sum = 0;
+//            for (int j = 0; j < MOVIE_LIMIT + 1; ++j)
+//                row_sum += trans_mat.getEntry(i, j);
+//            cout << row_sum << endl;
+//        }
+
+
+
         cout << "Building auxiliary matrices" << endl;
         // Make a summation matrix corresponding to expected number of visits.
         fMatrix visits(MOVIE_LIMIT + 1, MOVIE_LIMIT + 1);
@@ -149,8 +161,7 @@ public:
 
         fMatrix temp(1, 1);
 
-        const int num_iters = 20;
-            for (int i = 0; i < num_iters; ++i) {
+        for (int i = 0; i < num_iters; ++i) {
             cout << "Mult iter: " << i << endl;
             // Multiply and add to visits
             trans_powers.multiply(trans_mat, temp);
@@ -177,6 +188,7 @@ public:
 
     void setUser(int id)
     {
+//        cout << "Set user" << endl;
         // Make the row vector of user weights, then multiply it with
         // expected_visits, storing the result in user_vector. 
         User u(data);
@@ -187,11 +199,12 @@ public:
         int num_ratings = u.votes();
         for (int j = 0; j < num_ratings; ++j)
             if (u.movie(j) <= MOVIE_LIMIT) 
-                user_weights.setEntry(1, u.movie(j), 
+                user_weights.setEntry(0, u.movie(j) - 1, 
                                       rating_to_weight(u.score(j)));
                 
         // Store result in user_vector
         user_weights.multiply(this->expected_visits, this->user_vector);
+//        cout << "End set user" << endl;
     }
 
     // -1 if movie1 is better than movie2
@@ -200,10 +213,12 @@ public:
     {
         // Check if we can even use our expected visits vector.
         if (movie1 > MOVIE_LIMIT || movie2 > MOVIE_LIMIT) {
+            cout << "RANDOM" << endl;
             int random = rand() % 2;
             return random == 0 ? -1 : 1;
         }
-        if (user_vector.getEntry(1, movie1) > user_vector.getEntry(1, movie2))
+        if (user_vector.getEntry(0, movie1 -1) >
+              user_vector.getEntry(0, movie2 - 1))
             return -1;
         else        
             return 1;

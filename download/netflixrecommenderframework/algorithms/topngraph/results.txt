@@ -1,0 +1,14 @@
+Sink probability .3
+10 iters
+scaling function r^4
+
+time is time to make matrix O(m^3) plus time to get error O(u*m^2)
+
+MOVIE_LIMIT time(s)     error
+10          2.6         .529412
+100         10.4        .441858
+200         31.9        .41764
+300         71.5        .416416
+400         139.1       .411469
+500         258.6       .417929
+1000        3789.5      .409494

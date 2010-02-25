@@ -42,6 +42,8 @@
 
 #define MAGICID 344
 #define USER_PROBE_VERSION 1
+// For testing on smaller data in ordering.  Inclusive.
+const int MOVIE_LIMIT = 17770;
 
 Probe::Probe(DataBase *db) : db(db), output(ProbeFile)
 {};
@@ -329,7 +331,7 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
                 mmap(0, file.size(), PROT_READ, MAP_SHARED,
                      file.handle(),
                      (off_t)0);
-        if (probe == (uint*) - 1) {
+        if (probe == (uint*) -1) {
             qWarning() << "probe mmap failed";
             return -1;
         }
@@ -387,7 +389,8 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
                 int rating2 = probe[probeI + j * 2 + 1];
 
                 // avoid testing if the two movies are actually rated the same
-                if (rating1 == rating2)
+                if (rating1 == rating2 || movie1 > MOVIE_LIMIT
+                                       || movie2 > MOVIE_LIMIT)
                     continue;
 
                 // test the predicted order. This value is negative if there
@@ -414,7 +417,8 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
                 int rating2 = probe[probeI + j * 2 + 1];
 
                 // avoid testing if the two movies are actually rated the same
-                if (rating1 == rating2)
+                if (rating1 == rating2 || movie1 > MOVIE_LIMIT
+                                       || movie2 > MOVIE_LIMIT)
                     continue;
 
                 // test the predicted order. This value is negative if there
@@ -447,6 +451,7 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
     }
 
     double avgError = errorSum / counted_users;
+    qDebug() << "Counted users: " << counted_users;
     qDebug() << "Error calculation completed. Error is:" << avgError;
 
     return 0;
