@@ -2,6 +2,7 @@
 #include <user.h>
 
 const unsigned int NUM_FEATURES = 10;      // Number of features to use
+const unsigned int MIN_EPOCHS   = 10;      // Minimum number of epochs
 const unsigned int MAX_EPOCHS   = 200;     // Max epochs
 const double MIN_IMPROVEMENT = 0.00001;    // Minimum improvement required to
                                            // continue minimization
@@ -86,7 +87,8 @@ void SvdOrder::calculateFeatures()
     Movie movie(currDb);
     double averageRating = currDb->getAverageRating();
     for (unsigned int i = 0;
-         i < MAX_EPOCHS && (prevRMSE - RMSE) > MIN_IMPROVEMENT;
+         i < MIN_EPOCHS || 
+            (i < MAX_EPOCHS && (prevRMSE - RMSE) > MIN_IMPROVEMENT);
          i++)
     {
         prevRMSE = RMSE;
