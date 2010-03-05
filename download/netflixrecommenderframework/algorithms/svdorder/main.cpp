@@ -158,7 +158,6 @@ void SvdOrder::calculateFeaturesByOrder()
     clock_t referTime = clock();
 
     int numTestsPerUser = 1000;
-    double averageRating = currDb->getAverageRating();
 
     for (unsigned int i = 0;
          i < MIN_EPOCHS || 
