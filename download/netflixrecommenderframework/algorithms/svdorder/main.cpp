@@ -3,16 +3,18 @@
 
 const unsigned int NUM_FEATURES = 10;      // Number of features to use
 const unsigned int MIN_EPOCHS   = 10;      // Minimum number of epochs
-const unsigned int MAX_EPOCHS   = 200;     // Max epochs
-const double MIN_IMPROVEMENT = 0.00001;    // Minimum improvement required to
-                                           // continue minimization
+const unsigned int MAX_EPOCHS   = 1000;    // Max epochs
+const double MIN_IMPROVEMENT = 0.001;    // Minimum improvement required to
+                                          // continue minimization
 
 const double INIT = 0.1;           // Initialization value range for
                                    // features
 
 const double LRATE =      0.001;   // Learning rate parameter
-const double REGULARIZE = 0.015;   // Regularization parameter used
-                                   // to minimize over-fitting
+const double LRATE2 =     0.001;
+
+const double REGULARIZE = 0.015;    // Regularization parameter used
+const double REGULARIZE2 = 0.015;  // to minimize over-fitting
 
 class SvdOrder : public Algorithm, public OrderingAlgorithm
 {
@@ -24,9 +26,10 @@ public:
     double determine(int user);
 
     void setUser(int user);
-    int  order(int movie1, int movie2);    
+    int  order(int movie1, int movie);    
 
     void calculateFeatures();
+    void calculateFeaturesByOrder();
 
     void saveFeatures(QString filename);
     void loadFeatures(QString filename);
@@ -95,7 +98,10 @@ void SvdOrder::calculateFeatures()
         RMSE = 0;
 
         User user(currDb,6);
-        for (int j = 0; j < currDb->totalUsers(); j++)
+        int numUsers = currDb->totalUsers();
+        int totalSamples = 0; 
+
+        for (int j = 0; j < numUsers; j++)
         {   
             for (int k = 0; k < user.votes(); k++)
             {
@@ -121,12 +127,134 @@ void SvdOrder::calculateFeatures()
                     movieFeatures[movieIndex][l] -= LRATE * 
                                         (diff * oldUF * 2 + REGULARIZE * oldMF);
                 }
+                totalSamples++;
             }
             user.next();
         }
 
-        RMSE = sqrt(RMSE / currDb->totalVotes());
+        RMSE = sqrt(RMSE / totalSamples);
         qDebug() << "Epoch" << i + 1 << "RMSE: " << RMSE;
+    }                
+
+    qDebug() << "Done with training";
+}
+
+float randFloat()
+{
+    return ((float)rand()) / RAND_MAX;
+}
+
+void SvdOrder::calculateFeaturesByOrder()
+{
+    qDebug() << "Training";
+
+    // Keep looping until you have passed the maximum number
+    // of epochs or have stopped making significant progress
+    double prevErr = 1e8;
+    double err     = 1e7;
+    Movie movie(currDb);
+    
+    float PROGRESS_INTERVAL = 1; 
+    clock_t referTime = clock();
+
+    int numTestsPerUser = 1000;
+    double averageRating = currDb->getAverageRating();
+
+    for (unsigned int i = 0;
+         i < MIN_EPOCHS || 
+            (i < MAX_EPOCHS && (prevErr - err) > MIN_IMPROVEMENT);
+         i++)
+    {
+        prevErr = err;
+        err = 0;
+
+        User user(currDb,6);
+        int numUsers = currDb->totalUsers();
+
+        user.setId(6);
+
+        for (int j = 0; j < numUsers; j++)
+        {  
+            if (((float) (clock() - referTime)) / CLOCKS_PER_SEC >
+                    PROGRESS_INTERVAL)
+            {
+                qDebug() << j << err / (j + 1);
+                referTime = clock(); 
+            }
+            
+            float userErr = 0;
+            int numTests = 0;
+
+            // Only process some of the movies per user per epoch. Otherwise,
+            // the algorithm takes up alot of time per epoch
+            int userIndex = j;
+            int userVotes = user.votes();
+
+            
+            int thisUserTests = numTestsPerUser;
+            if (thisUserTests > userVotes * userVotes)
+                thisUserTests = userVotes * userVotes;
+ 
+            for (int testI = 0; testI < thisUserTests; testI++)
+            {
+                int m1 = rand() % userVotes;
+                int m2 = rand() % userVotes;
+                 
+                int movieIndex1 = user.movie(m1) - 1;
+                float rating1 = user.score(m1);
+
+                int movieIndex2 = user.movie(m2) - 1;
+                float rating2 = user.score(m2);
+                
+                // Only do tests on movies that are not the same
+                if (rating1 == rating2)
+                    continue;
+                numTests ++;
+
+                float predict1 = predictRating(movieIndex1, userIndex);
+                float predict2 = predictRating(movieIndex2, userIndex);
+                
+                // This value is positive only when the prediction
+                // order was correct
+                float ratingDiff  = (rating1 - rating2)/fabs(rating1 - rating2);
+                float x = ratingDiff * (predict1 - predict2);
+
+                if (x < 1)
+                {
+                    // If the prediction was not correct to some
+                    // threshold (in this case 1), move the user factors
+                    // accordingly to fix it
+                    for (unsigned int fI = 0; fI < NUM_FEATURES; fI++)
+                    {
+                        float oldUF = userFeatures[userIndex][fI];
+                        float oldMF1 = movieFeatures[movieIndex1][fI];
+                        float oldMF2 = movieFeatures[movieIndex2][fI];
+
+                        userFeatures[userIndex][fI] -=
+                            LRATE2 * (-ratingDiff * (oldMF1 - oldMF2) 
+                                     + REGULARIZE2 * oldUF);  
+
+                        movieFeatures[movieIndex1][fI] -=
+                            LRATE2 * (-ratingDiff * oldUF 
+                                     + REGULARIZE2 * oldMF1);
+
+                        movieFeatures[movieIndex2][fI] -=
+                            LRATE2 * (ratingDiff * oldUF 
+                                     + REGULARIZE2 * oldMF2);
+                    } 
+                    
+                    if (x < 0) 
+                        userErr += 1;
+                }
+            } 
+
+            err += userErr / (numTests + 1);
+            user.next();
+        }
+       
+
+        err /= numUsers;
+        qDebug() << "Epoch" << i + 1 << "Error: " << err;
     }                
 
     qDebug() << "Done with training";
@@ -241,7 +369,7 @@ int main(int numArgs, char ** args)
     if (f.exists())
         alg.loadFeatures("Features.dat");
     else
-        alg.calculateFeatures();
+        alg.calculateFeaturesByOrder();
 
     if (doOrder)
         probe.runProbeOrdering(&alg, "probe");
