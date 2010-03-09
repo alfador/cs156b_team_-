@@ -579,8 +579,9 @@ void Probe :: runQualifyingOrdering(OrderingAlgorithm * algorithm,
             errorFrac = ((double) errors) / numTests;
         else
             --counted_users;
-
-         
+    
+        currU.next();
+     
         errorSum += errorFrac;
 
         if ((clock() - referTime) / CLOCKS_PER_SEC >= PROGRESS_INTERVAL)
