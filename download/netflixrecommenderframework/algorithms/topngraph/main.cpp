@@ -15,14 +15,36 @@ const float SINK_PROB = .3;     // Probability of going to the sink node
 const float WEIGHT_SCALE = 1 - SINK_PROB;
 const int FIRST_USER = 6;       // ID of first user
 const int MAX_USER_ID = 2649429; // Maximal user id
-const int num_iters = 10; // Number of iterations to run
-const int MOVIE_LIMIT = 500;   // For testing on smaller data.  Inclusive.
+const int num_iters = 0; // Number of iterations to run
+const int MOVIE_LIMIT = 2000;   // For testing on smaller data.  Inclusive.
 
 
 // Converts a rating (1-5) to a weight
 // Adjust this function for your own purposes
 inline float rating_to_weight(int rating) {
-    return pow(rating, 4);
+/*    switch (rating)
+    {
+        case 1:
+        return .0001;
+
+        case 2:
+        return .0010;
+
+        case 3:
+        return .0100;
+
+        case 4:
+        return .1000;
+
+        case 5:
+        return 1;
+
+        default:
+        assert(false);
+        return 0;
+    }
+*/
+   return pow(rating, 20);
 }
 
 // Implements the OrderingAlgorithm interface 
@@ -43,6 +65,7 @@ public:
         float *user_sum = new float[total_users];
         int *user_ids = new int[total_users];
         int *user_indices = new int[MAX_USER_ID];
+        this->user_vector.setSize(1, MOVIE_LIMIT + 1);
 
         // Determine user indices
         cout << "Getting user indices." << endl;
@@ -101,8 +124,6 @@ public:
         cout << "Making transition matrix." << endl;
 
         fMatrix trans_mat(MOVIE_LIMIT + 1, MOVIE_LIMIT + 1);
-//        fMatrix trans_mat(total_movies + 1, total_movies + 1);
-
 
         report_interval = MOVIE_LIMIT / 10;
         Movie m1(db);
@@ -133,22 +154,16 @@ public:
             trans_mat.setEntry(i - 1, MOVIE_LIMIT, SINK_PROB);
         }
 
+        // Give some back to movies
+        float loop_back = WEIGHT_SCALE / total_movies;
+
         // Set probabilities in the sink row.
         for (int i = 0; i < MOVIE_LIMIT; ++i)
             trans_mat.setEntry(MOVIE_LIMIT, i, 0);
+//            trans_mat.setEntry(MOVIE_LIMIT, i, loop_back);
 
         trans_mat.setEntry(MOVIE_LIMIT, MOVIE_LIMIT, 1);
-
-
-//        // Make sure row sums are 1.
-//        for (int i = 0; i < MOVIE_LIMIT + 1; ++i) {
-//            float row_sum = 0;
-//            for (int j = 0; j < MOVIE_LIMIT + 1; ++j)
-//                row_sum += trans_mat.getEntry(i, j);
-//            cout << row_sum << endl;
-//        }
-
-
+//        trans_mat.setEntry(MOVIE_LIMIT, MOVIE_LIMIT, SINK_PROB);
 
         cout << "Building auxiliary matrices" << endl;
         // Make a summation matrix corresponding to expected number of visits.
@@ -170,14 +185,14 @@ public:
             trans_powers.setSize(MOVIE_LIMIT + 1, MOVIE_LIMIT + 1);
             trans_powers.addFMatrix(temp);
         }
-    // Free up some memory
-    trans_powers.setSize(1, 1);
-    trans_mat.setSize(1, 1);
+        // Free up some memory
+        trans_powers.setSize(1, 1);
+        trans_mat.setSize(1, 1);
 
-    // Put in expected_visits
-    cout << "Storing..." << endl;
-    this->expected_visits.setSize(MOVIE_LIMIT + 1, MOVIE_LIMIT + 1);
-    this->expected_visits.addFMatrix(visits);
+        // Put in expected_visits
+        cout << "Storing..." << endl;
+        this->expected_visits.setSize(MOVIE_LIMIT + 1, MOVIE_LIMIT + 1);
+        this->expected_visits.addFMatrix(visits);
 
     }
 
@@ -188,23 +203,24 @@ public:
 
     void setUser(int id)
     {
-//        cout << "Set user" << endl;
         // Make the row vector of user weights, then multiply it with
         // expected_visits, storing the result in user_vector. 
         User u(data);
-        fMatrix user_weights(1, MOVIE_LIMIT + 1);
+        this->user_weights.setSize(1, MOVIE_LIMIT + 1); // Fill with 0s
         u.setId(id);
 
         // Fill in user_weights.
         int num_ratings = u.votes();
         for (int j = 0; j < num_ratings; ++j)
             if (u.movie(j) <= MOVIE_LIMIT) 
-                user_weights.setEntry(0, u.movie(j) - 1, 
+                this->user_weights.setEntry(0, u.movie(j) - 1, 
                                       rating_to_weight(u.score(j)));
                 
-        // Store result in user_vector
-        user_weights.multiply(this->expected_visits, this->user_vector);
-//        cout << "End set user" << endl;
+
+        // Zero out user_vector
+        for (int i = 0; i < MOVIE_LIMIT + 1; ++i)
+            this->user_vector.setEntry(0, i, -1);
+
     }
 
     // -1 if movie1 is better than movie2
@@ -217,10 +233,26 @@ public:
             int random = rand() % 2;
             return random == 0 ? -1 : 1;
         }
-        if (user_vector.getEntry(0, movie1 -1) >
-              user_vector.getEntry(0, movie2 - 1))
+        float m1 = user_vector.getEntry(0, movie1 - 1);
+        if (m1 < 0) {
+            // Need to get entry.
+            user_vector.setEntry(0, movie1 - 1,
+                this->user_weights.multiplyVecByColumn(expected_visits,
+                                                       movie1 - 1));
+            m1 = user_vector.getEntry(0, movie1 - 1);
+        }
+        float m2 = user_vector.getEntry(0, movie2 - 1);
+        if (m2 < 0) {
+            // Need to get entry.
+            user_vector.setEntry(0, movie2 - 1,
+                this->user_weights.multiplyVecByColumn(expected_visits,
+                                                       movie2 - 1));
+            m2 = user_vector.getEntry(0, movie2 - 1);
+        }
+
+        if (m1 > m2)
             return -1;
-        else        
+        else
             return 1;
     }
 
@@ -228,6 +260,7 @@ private:
     
     fMatrix expected_visits;
     fMatrix user_vector;
+    fMatrix user_weights;
     int *user_indices;
     DataBase *data;
 };

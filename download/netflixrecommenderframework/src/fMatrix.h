@@ -33,6 +33,7 @@ public:
 
     // Other
     void multiply(fMatrix& other, fMatrix& result);
+    float multiplyVecByColumn(fMatrix& other, int col);
     void randomize();
     int toFile(QString filename);
     int fromFile(QString filename);

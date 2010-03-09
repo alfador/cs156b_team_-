@@ -12,3 +12,16 @@ MOVIE_LIMIT time(s)     error
 400         139.1       .411469
 500         258.6       .417929
 1000        3789.5      .409494
+
+After improvements
+MOVIE_LIMIT time(s)
+100         3
+500         ~15
+1000        86.0
+2000        12m20.2     .416012
+
+sink prob .1
+10 iters
+5000 movies
+r^4 scaling
+.421112

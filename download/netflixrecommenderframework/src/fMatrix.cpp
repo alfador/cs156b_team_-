@@ -62,14 +62,23 @@ void fMatrix::multiply(fMatrix& other, fMatrix& result) {
     assert(this->cols() == other.rows());
     // Make the result matrix.
     result.setSize(this->rows(), other.cols());
-    for (int row = 0; row < result.rows(); row++) {
-        for (int col = 0; col < result.cols(); col++) {
+    for (int row = 0; row < result.rows(); ++row) {
+        for (int col = 0; col < result.cols(); ++col) {
             float sum = 0;
-            for (int i = 0; i < this->cols(); i++)
+            for (int i = 0; i < this->cols(); ++i)
                 sum += this->getEntry(row, i) * other.getEntry(i, col);
             result.setEntry(row, col, sum);
         }
     }
+}
+
+// Multiply a row vector (this) by a column in a matrix 'other'
+float fMatrix::multiplyVecByColumn(fMatrix& other, int col) {
+    assert(this->cols() == other.rows());
+    float result = 0;
+    for (int i = 0; i < this->cols(); ++i)
+        result += this->getEntry(0, i) * other.getEntry(i, col);
+    return result;
 }
 
 // Fill the entries in the given matrix randomly.
