@@ -103,9 +103,13 @@ int main(int numArgs, char ** args)
     Probe probe(&db);
 
     // Filename of input quiz file
-    QString quizFileName(args[1]);
+    QString quizFilename(args[1]);
 
-    QuizFileOrder qfOrd(&db, quizFileName);
+    // Filename of true quiz ratings
+    QString trueRatingsFilename(args[2]);
+
+    QuizFileOrder qf_ord(&db, quizFilename);
+    probe.runQualifyingOrdering(qf_ord, trueRatingsFilename);
     
 }
 
