@@ -43,7 +43,7 @@
 #define MAGICID 344
 #define USER_PROBE_VERSION 1
 // For testing on smaller data in ordering.  Inclusive.
-const int MOVIE_LIMIT = 2000;
+const int MOVIE_LIMIT = 17770;
 
 Probe::Probe(DataBase *db) : db(db), output(ProbeFile)
 {};
