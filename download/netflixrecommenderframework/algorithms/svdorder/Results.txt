@@ -4,9 +4,14 @@ Using RMSE as minimizer:
     orderError: .26002 RMSE: 0.938167
     Time: 11m 44.817s
 
+    Qualifying: .260286
+    Test:       .26049
+
 Using SVM minimizer:
 
 10 factors, LRATE .001, REGULARIZE .015, converged to .001 (22 epochs)
     orderError: .241973 RMSE: 1.17995  
     Time 42m 29.659s
-    
+
+    Qualifying .250008 
+    Test:      .250382 
