@@ -82,6 +82,11 @@ public:
     int runProbe(Algorithm *algorithm, const QString &probeFileName = "probe");
     int runProbeOrdering(OrderingAlgorithm * algorithm,
                          const QString &probeFileName = "probe");
+
+    void runQualifyingOrdering(OrderingAlgorithm * algorithm,
+                               const QString& filename);
+
+
     void setOutput(Output);
 
 private:

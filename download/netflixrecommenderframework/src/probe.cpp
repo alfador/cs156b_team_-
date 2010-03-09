@@ -29,6 +29,7 @@
 #include "probe.h"
 #include "user.h"
 #include <qvector.h>
+#include <qstringlist.h>
 #include <qpair.h>
 #include <qhash.h>
 #include <qdebug.h>
@@ -456,3 +457,144 @@ int Probe :: runProbeOrdering(OrderingAlgorithm * algorithm,
 
     return 0;
 }
+
+void Probe :: runQualifyingOrdering(OrderingAlgorithm * algorithm,
+                                    const QString& filename)
+{
+    int numUsers = db->totalUsers();
+
+    QFile qual(filename);
+    qual.open(QFile :: ReadOnly | QFile :: Text);
+
+    QVector<QVector<QPair<int, float> > > qualRatings;
+    qualRatings.resize(numUsers);
+ 
+    QTextStream in(&qual);
+    QString line = in.readLine();
+    int currUserId = -1;
+
+    // Read in the ratings from the qualifying file given
+    while (!line.isNull())
+    {
+        if (line.endsWith(":"))
+        {
+            // New User line`
+            line.remove(":");
+            currUserId = line.toInt();
+        }    
+        else
+        {
+            // Movie line
+            QStringList parts = line.split(","); 
+            int movieId = parts[0].toInt();
+            float rating  = parts[1].toFloat();
+
+            qualRatings[db->mapUser(currUserId)].append(
+                QPair<int, float>(movieId, rating));    
+        }
+
+        line = in.readLine();
+    }    
+
+    // Intervals to update progress in seconds
+    int PROGRESS_INTERVAL = 1;
+    clock_t referTime = clock();
+ 
+    // Go through each user
+    User currU(db);
+    currU.setId(6);
+    double errorSum = 0.0;
+    
+    int counted_users = numUsers;
+ 
+    qDebug() << "Running Error Calculation";     
+    for (int userI = 0; userI < numUsers; ++userI)
+    {
+        int userId = currU.id();
+        int numRatings = qualRatings[userI].size();
+
+        algorithm -> setUser(userId);
+
+        int errors = 0;
+        int numTests = 0;
+    
+        // Compare all the test set ratings against the training set.
+        for (int i = 0; i < currU.votes(); i++)
+        {
+            for (int j = 0; j < numRatings; j++)
+            {
+                int movie1 = currU.movie(i);
+                int rating1 = currU.score(i);
+    
+                int movie2 = qualRatings[userI][j].first;
+                int rating2 = qualRatings[userI][j].second;
+
+                // avoid testing if the two movies are actually rated the same
+                if (rating1 == rating2 || movie1 > MOVIE_LIMIT
+                                       || movie2 > MOVIE_LIMIT)
+                    continue;
+
+                // test the predicted order. This value is negative if there
+                // is an error
+                int testVal = (rating2 - rating1) *
+                               algorithm->order(movie1, movie2);
+                
+                if (testVal < 0)
+                    ++errors;
+
+                ++ numTests;
+            }
+        }
+
+        // Test the pairs within the test set itself
+        for (int i = 0; i < numRatings; i++)
+        {
+            for (int j = i + 1; j < numRatings; j++)
+            {
+                int movie1 = qualRatings[userI][i].first;
+                int rating1 = qualRatings[userI][i].second;
+
+                int movie2 = qualRatings[userI][j].first;
+                int rating2 = qualRatings[userI][j].second;
+
+               // avoid testing if the two movies are actually rated the same
+                if (rating1 == rating2 || movie1 > MOVIE_LIMIT
+                                       || movie2 > MOVIE_LIMIT)
+                    continue;
+
+                // test the predicted order. This value is negative if there
+                // is an error
+                int testVal = (rating2 - rating1) *
+                               algorithm->order(movie1, movie2);
+                
+                if (testVal < 0)
+                    ++errors;
+
+                ++ numTests;
+            }
+        }
+
+        double errorFrac = 0.0;
+        if (numTests > 0)
+            errorFrac = ((double) errors) / numTests;
+        else
+            --counted_users;
+
+         
+        errorSum += errorFrac;
+
+        if ((clock() - referTime) / CLOCKS_PER_SEC >= PROGRESS_INTERVAL)
+        {
+            referTime = clock();
+            qDebug() << userI + 1 << "of" << numUsers << "users done";
+        }
+    }
+
+    double avgError = errorSum / counted_users;
+    qDebug() << "Counted users: " << counted_users;
+    qDebug() << "Error calculation completed. Error is:" << avgError;
+
+
+     
+}
+     
